@@ -4,78 +4,67 @@
     <meta charset="UTF-8">
     <title>OpenClaw - Captain Claw (1997)</title>
     <meta name="description" content="Reimplementation of Captain Claw (1997) platformer in WebAssembly">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 
     <style>
-        body {
-            background-color: #0b0c10;
-            color: #c5c6c7;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        html, body {
+            width: 100%;
+            height: 100%;
             margin: 0;
             padding: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            text-align: center;
+            overflow: hidden !important;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background-color: #000;
+            color: #c5c6c7;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             user-select: none;
             -webkit-user-select: none;
-            touch-action: manipulation;
+            touch-action: none;
         }
 
-        h1 {
-            color: #66fcf1;
-            margin-bottom: 5px;
-            font-size: 1.8rem;
-            text-shadow: 0 0 10px rgba(102, 252, 241, 0.3);
-        }
-
-        p.subtitle {
-            color: #8892b0;
-            margin-top: 0;
-            font-size: 0.9rem;
-            margin-bottom: 20px;
-        }
-
-        #game-container {
+        /* Centered Game Viewport with Pillarbox / Letterbox Margins */
+        #game-viewport {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             position: relative;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
-            border-radius: 8px;
-            overflow: hidden;
             background-color: #000;
-            border: 2px solid #1f2833;
-            width: 640px;
-            height: 480px;
-            max-width: 100vw;
+            overflow: hidden;
         }
 
         #canvas {
             display: none;
-            width: 100%;
-            height: 100%;
+            max-width: 100vw;
+            max-height: 100vh;
+            object-fit: contain;
             background-color: #000;
             outline: none;
+            box-shadow: 0 0 20px rgba(0,0,0,0.9);
         }
 
         #loading-screen {
-            width: 100%;
-            height: 100%;
+            width: 100vw;
+            height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             background: linear-gradient(135deg, #1f2833 0%, #0b0c10 100%);
-            padding: 30px;
+            padding: 20px;
             box-sizing: border-box;
         }
 
         .claw-logo {
-            font-size: 2rem;
+            font-size: 2.2rem;
             font-weight: bold;
             color: #45f3ff;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
             letter-spacing: 2px;
+            text-shadow: 0 0 12px rgba(69, 243, 255, 0.4);
         }
 
         #status-text {
@@ -87,6 +76,7 @@
 
         .progress-bar-container {
             width: 80%;
+            max-width: 400px;
             height: 18px;
             background-color: #0b0c10;
             border-radius: 9px;
@@ -108,17 +98,113 @@
             font-size: 0.85rem;
         }
 
-        /* Translucent Touch Controls Overlay */
-        .touch-overlay {
-            position: absolute;
+        /* Floating Settings Gear Button */
+        #settings-gear-btn {
+            position: fixed;
+            top: 12px;
+            right: 12px;
+            z-index: 200;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(15, 25, 35, 0.65);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1.5px solid rgba(69, 243, 255, 0.5);
+            color: #66fcf1;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+            transition: transform 0.2s, background 0.2s;
+            pointer-events: auto;
+        }
+
+        #settings-gear-btn:active {
+            transform: scale(0.9);
+            background: rgba(69, 243, 255, 0.4);
+        }
+
+        /* Glassmorphism Settings Modal Overlay */
+        #settings-modal {
+            position: fixed;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 10;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            z-index: 300;
             display: none;
-            box-sizing: border-box;
+            align-items: center;
+            justify-content: center;
+            pointer-events: auto;
+        }
+
+        .settings-card {
+            background: #1f2833;
+            border: 1.5px solid #45f3ff;
+            border-radius: 12px;
+            padding: 20px 24px;
+            width: 90%;
+            max-width: 380px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), 0 0 20px rgba(69, 243, 255, 0.2);
+            color: #c5c6c7;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(69, 243, 255, 0.2);
+            padding-bottom: 8px;
+            color: #66fcf1;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .settings-close-btn {
+            background: none;
+            border: none;
+            color: #66fcf1;
+            font-size: 1.3rem;
+            cursor: pointer;
+            padding: 0 4px;
+        }
+
+        .settings-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+        }
+
+        .settings-row button, .settings-row select {
+            background: #0b0c10;
+            color: #66fcf1;
+            border: 1px solid #45f3ff;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+
+        /* Full Screen Touch Overlay (Covers Entire Viewport including Black Bars) */
+        #touch-controls {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 100;
+            display: none;
         }
 
         .touch-btn {
@@ -156,10 +242,6 @@
             letter-spacing: 0.5px;
         }
 
-        /* Individual Default Button Positions */
-        #btn-esc { top: 12px; left: 12px; }
-        #btn-enter { top: 12px; right: 12px; }
-
         /* Action Buttons Individual Positions */
         .action-btn {
             width: 54px;
@@ -167,11 +249,6 @@
             border-radius: 50%;
             font-size: 1.1rem;
         }
-
-        #btn-jump { bottom: 15px; right: 15px; }
-        #btn-sword { bottom: 15px; right: 80px; }
-        #btn-magic { bottom: 80px; right: 15px; }
-        #btn-shoot { bottom: 80px; right: 80px; }
 
         .btn-label {
             font-size: 0.48rem;
@@ -184,8 +261,6 @@
         /* 8-Direction Virtual Joystick */
         #joystick-container {
             position: absolute;
-            bottom: 15px;
-            left: 15px;
             width: 130px;
             height: 130px;
             border-radius: 50%;
@@ -225,93 +300,126 @@
         .joy-w { left: 8px; }
         .joy-e { right: 8px; }
 
-        /* Edit Layout Handles for Every Single Button */
+        /* Clean Edit Mode Styling & Inline Tooltip Adjuster */
         .edit-mode-active {
             border: 2px dashed #00ffaa !important;
-            background: rgba(0, 255, 170, 0.2) !important;
-            box-shadow: 0 0 10px rgba(0, 255, 170, 0.5) !important;
+            background: rgba(0, 255, 170, 0.25) !important;
+            box-shadow: 0 0 12px rgba(0, 255, 170, 0.7) !important;
+            z-index: 150 !important;
         }
 
-        .layout-size-controls {
-            position: absolute;
-            top: -28px;
-            left: 50%;
-            transform: translateX(-50%);
+        #inline-size-tooltip {
+            position: fixed;
+            z-index: 250;
             display: none;
             background: #1f2833;
-            border: 1px solid #00ffaa;
-            border-radius: 10px;
-            padding: 2px 4px;
-            gap: 4px;
-            font-size: 0.65rem;
+            border: 1.5px solid #00ffaa;
+            border-radius: 20px;
+            padding: 4px 10px;
+            gap: 8px;
+            align-items: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.7);
+            font-size: 0.75rem;
             color: #00ffaa;
-            z-index: 30;
-            white-space: nowrap;
+            pointer-events: auto;
         }
 
-        .layout-size-btn {
+        .inline-size-btn {
             background: #0b0c10;
             color: #66fcf1;
             border: 1px solid #45f3ff;
-            border-radius: 3px;
-            padding: 1px 5px;
-            cursor: pointer;
-            font-size: 0.75rem;
-        }
-
-        .controls-bar {
-            margin-top: 15px;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
             display: flex;
-            gap: 12px;
             align-items: center;
-            flex-wrap: wrap;
             justify-content: center;
-        }
-
-        button, select {
-            background-color: #1f2833;
-            color: #66fcf1;
-            border: 1px solid #45f3ff;
-            padding: 8px 16px;
-            border-radius: 4px;
+            font-weight: bold;
             cursor: pointer;
             font-size: 0.9rem;
-            transition: all 0.2s ease;
-        }
-
-        button:hover, select:hover {
-            background-color: #45f3ff;
-            color: #0b0c10;
-            box-shadow: 0 0 10px rgba(69, 243, 255, 0.5);
-        }
-
-        label {
-            font-size: 0.85rem;
-            color: #c5c6c7;
         }
 
         #console {
-            width: 640px;
-            height: 120px;
-            background-color: #050505;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100vw;
+            height: 140px;
+            background-color: rgba(5, 5, 5, 0.9);
             color: #00ffaa;
             font-family: monospace;
             font-size: 0.75rem;
-            border: 1px solid #1f2833;
-            margin-top: 15px;
+            border-top: 2px solid #1f2833;
             padding: 8px;
             box-sizing: border-box;
             display: none;
             overflow-y: scroll;
+            z-index: 250;
         }
     </style>
 </head>
 <body>
 
-    <h1>OpenClaw WebAssembly</h1>
-    <p class="subtitle">Captain Claw (1997) Reimplementation in Browser</p>
+    <!-- Floating Gear Button for Settings Menu -->
+    <button id="settings-gear-btn" onclick="toggleSettingsModal()" title="Settings ⚙️">⚙️</button>
 
-    <div id="game-container">
+    <!-- Glassmorphism Settings Modal -->
+    <div id="settings-modal" onclick="if(event.target===this) toggleSettingsModal()">
+        <div class="settings-card">
+            <div class="settings-header">
+                <span>GAME SETTINGS</span>
+                <button class="settings-close-btn" onclick="toggleSettingsModal()">✕</button>
+            </div>
+
+            <div class="settings-row">
+                <label>Touch Controls:</label>
+                <button id="modal-touch-btn" onclick="toggleTouchControls()">AUTO</button>
+            </div>
+
+            <div class="settings-row">
+                <label>Control Layout:</label>
+                <button id="modal-edit-btn" onclick="toggleEditLayoutMode()">Edit Layout ✏️</button>
+            </div>
+
+            <div class="settings-row">
+                <label>Reset Layout:</label>
+                <button onclick="resetControlLayoutToDefault()">Reset Defaults 🔄</button>
+            </div>
+
+            <div class="settings-row">
+                <label>Resolution:</label>
+                <select id="res" onchange="CheatCodeManager.winsize = this.value; CheatCodeManager.resize()">
+                    <option value="640 480">640x480</option>
+                    <option value="800 600">800x600</option>
+                    <option value="1024 768">1024x768</option>
+                    <option value="1280 960">1280x960</option>
+                </select>
+            </div>
+
+            <div class="settings-row">
+                <label>Game Scale:</label>
+                <select id="scale" onchange="CheatCodeManager.scale = this.value; CheatCodeManager.resize()">
+                    <option value="-1">Original</option>
+                    <option value="1">1x</option>
+                    <option value="1.5">1.5x</option>
+                    <option value="2">2x</option>
+                </select>
+            </div>
+
+            <div class="settings-row">
+                <label>Display Mode:</label>
+                <button onclick="toggleFullscreenMode()">Fullscreen ⛶</button>
+            </div>
+
+            <div class="settings-row">
+                <label>Debug Console:</label>
+                <button onclick="toggleDebugConsole()">Toggle Log</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Centered Game Viewport -->
+    <div id="game-viewport">
         <div id="loading-screen">
             <div class="claw-logo">CAPTAIN CLAW</div>
             <div id="status-text">Initializing asset assembly...</div>
@@ -322,104 +430,48 @@
         </div>
 
         <canvas id="canvas" width="640" height="480" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
-
-        <!-- Translucent Mobile Touch Controls (Every Single Button Separately Movable) -->
-        <div id="touch-controls" class="touch-overlay">
-            
-            <!-- Top Utility Buttons (Independent) -->
-            <button id="btn-esc" class="touch-btn touch-btn-util movable-element" data-element-id="btn-esc" title="Pause / Menu">
-                ⏸️ PAUSE
-                <div class="layout-size-controls">
-                    <button class="layout-size-btn" onclick="adjustElementScale('btn-esc', -0.1)">-</button>
-                    <button class="layout-size-btn" onclick="adjustElementScale('btn-esc', 0.1)">+</button>
-                </div>
-            </button>
-
-            <button id="btn-enter" class="touch-btn touch-btn-util movable-element" data-element-id="btn-enter" title="Select / Confirm">
-                ⏎ ENTER
-                <div class="layout-size-controls">
-                    <button class="layout-size-btn" onclick="adjustElementScale('btn-enter', -0.1)">-</button>
-                    <button class="layout-size-btn" onclick="adjustElementScale('btn-enter', 0.1)">+</button>
-                </div>
-            </button>
-
-            <!-- 8-Direction Virtual Joystick (Independent) -->
-            <div id="joystick-container" class="movable-element" data-element-id="joystick">
-                <div class="joy-sector joy-n">▲</div>
-                <div class="joy-sector joy-s">▼</div>
-                <div class="joy-sector joy-w">◀</div>
-                <div class="joy-sector joy-e">▶</div>
-                <div id="joystick-knob"></div>
-
-                <div class="layout-size-controls">
-                    <button class="layout-size-btn" onclick="adjustElementScale('joystick', -0.1)">-</button>
-                    <button class="layout-size-btn" onclick="adjustElementScale('joystick', 0.1)">+</button>
-                </div>
-            </div>
-
-            <!-- Action Buttons (Each Move & Scale Independently) -->
-            <button id="btn-shoot" class="touch-btn action-btn movable-element" data-element-id="btn-shoot" title="Pistol / Shoot">
-                🔫<span class="btn-label">SHOOT</span>
-                <div class="layout-size-controls">
-                    <button class="layout-size-btn" onclick="adjustElementScale('btn-shoot', -0.1)">-</button>
-                    <button class="layout-size-btn" onclick="adjustElementScale('btn-shoot', 0.1)">+</button>
-                </div>
-            </button>
-
-            <button id="btn-magic" class="touch-btn action-btn movable-element" data-element-id="btn-magic" title="Magic / Dynamite">
-                💣<span class="btn-label">BOMB</span>
-                <div class="layout-size-controls">
-                    <button class="layout-size-btn" onclick="adjustElementScale('btn-magic', -0.1)">-</button>
-                    <button class="layout-size-btn" onclick="adjustElementScale('btn-magic', 0.1)">+</button>
-                </div>
-            </button>
-
-            <button id="btn-sword" class="touch-btn action-btn movable-element" data-element-id="btn-sword" title="Sword / Melee">
-                ⚔️<span class="btn-label">ATTACK</span>
-                <div class="layout-size-controls">
-                    <button class="layout-size-btn" onclick="adjustElementScale('btn-sword', -0.1)">-</button>
-                    <button class="layout-size-btn" onclick="adjustElementScale('btn-sword', 0.1)">+</button>
-                </div>
-            </button>
-
-            <button id="btn-jump" class="touch-btn action-btn movable-element" data-element-id="btn-jump" title="Jump">
-                🦘<span class="btn-label">JUMP</span>
-                <div class="layout-size-controls">
-                    <button class="layout-size-btn" onclick="adjustElementScale('btn-jump', -0.1)">-</button>
-                    <button class="layout-size-btn" onclick="adjustElementScale('btn-jump', 0.1)">+</button>
-                </div>
-            </button>
-
-        </div>
     </div>
 
-    <div class="controls-bar">
-        <button onclick="Module.canvas.requestFullscreen()">Fullscreen</button>
-        <button id="toggle-touch-btn" onclick="toggleTouchControls()">Touch Controls: AUTO</button>
-        <button id="edit-layout-btn" onclick="toggleEditLayoutMode()">Edit Layout ⚙️</button>
+    <!-- Fullscreen Touch Overlay (Covers Entire Viewport including Black Side Margins) -->
+    <div id="touch-controls" class="touch-overlay">
         
-        <label for="res">Resolution:</label>
-        <select id="res" onchange="CheatCodeManager.winsize = this.value; CheatCodeManager.resize()">
-            <option value="640 480">640x480</option>
-            <option value="800 600">800x600</option>
-            <option value="1024 768">1024x768</option>
-            <option value="1280 960">1280x960</option>
-        </select>
+        <button id="btn-esc" class="touch-btn touch-btn-util movable-element" data-element-id="btn-esc" title="Pause / Menu">⏸️ PAUSE</button>
+        <button id="btn-enter" class="touch-btn touch-btn-util movable-element" data-element-id="btn-enter" title="Select / Confirm">⏎ ENTER</button>
 
-        <label for="scale">Scale:</label>
-        <select id="scale" onchange="CheatCodeManager.scale = this.value; CheatCodeManager.resize()">
-            <option value="-1">Original</option>
-            <option value="1">1x</option>
-            <option value="1.5">1.5x</option>
-            <option value="2">2x</option>
-        </select>
+        <!-- 8-Direction Virtual Joystick -->
+        <div id="joystick-container" class="movable-element" data-element-id="joystick">
+            <div class="joy-sector joy-n">▲</div>
+            <div class="joy-sector joy-s">▼</div>
+            <div class="joy-sector joy-w">◀</div>
+            <div class="joy-sector joy-e">▶</div>
+            <div id="joystick-knob"></div>
+        </div>
 
-        <button onclick="toggleDebugConsole()">Toggle Log Console</button>
+        <!-- Action Buttons -->
+        <button id="btn-shoot" class="touch-btn action-btn movable-element" data-element-id="btn-shoot" title="Pistol / Shoot">🔫<span class="btn-label">SHOOT</span></button>
+        <button id="btn-magic" class="touch-btn action-btn movable-element" data-element-id="btn-magic" title="Magic / Dynamite">💣<span class="btn-label">BOMB</span></button>
+        <button id="btn-sword" class="touch-btn action-btn movable-element" data-element-id="btn-sword" title="Sword / Melee">⚔️<span class="btn-label">ATTACK</span></button>
+        <button id="btn-jump" class="touch-btn action-btn movable-element" data-element-id="btn-jump" title="Jump">🦘<span class="btn-label">JUMP</span></button>
+
+    </div>
+
+    <!-- Floating Inline Size Tooltip for Selected Button in Edit Mode -->
+    <div id="inline-size-tooltip">
+        <span id="tooltip-elem-title">Size</span>
+        <button class="inline-size-btn" onclick="adjustSelectedElementScale(-0.1)">-</button>
+        <span id="tooltip-elem-pct">100%</span>
+        <button class="inline-size-btn" onclick="adjustSelectedElementScale(0.1)">+</button>
     </div>
 
     <textarea id="console" readonly></textarea>
 
     <script type="text/javascript">
+        // Prevent all default touch scrolling
+        document.addEventListener('touchmove', function (e) {
+            if (e.target.closest('#console') || e.target.closest('#settings-modal')) return;
+            e.preventDefault();
+        }, { passive: false });
+
         // ---------------------------------------------------------------------
         // 1. Keyboard Simulation Helper
         // ---------------------------------------------------------------------
@@ -610,22 +662,26 @@
         }
 
         // ---------------------------------------------------------------------
-        // 4. Custom Individual Drag & Resize Layout System
+        // 4. Custom Drag & Resize Layout System (Full Viewport Movable)
         // ---------------------------------------------------------------------
         var isEditLayoutMode = false;
-        var elementLayoutConfig = {
-            'joystick': { scale: 1.0 },
-            'btn-jump': { scale: 1.0 },
-            'btn-sword': { scale: 1.0 },
-            'btn-shoot': { scale: 1.0 },
-            'btn-magic': { scale: 1.0 },
-            'btn-esc': { scale: 1.0 },
-            'btn-enter': { scale: 1.0 }
+        var selectedElementForEdit = null;
+
+        var defaultElementPositions = {
+            'btn-esc': { left: '15px', top: '15px', scale: 1.0 },
+            'btn-enter': { right: '65px', top: '15px', left: 'auto', scale: 1.0 },
+            'joystick': { left: '20px', bottom: '20px', top: 'auto', scale: 1.0 },
+            'btn-jump': { right: '20px', bottom: '20px', left: 'auto', top: 'auto', scale: 1.0 },
+            'btn-sword': { right: '85px', bottom: '20px', left: 'auto', top: 'auto', scale: 1.0 },
+            'btn-magic': { right: '20px', bottom: '85px', left: 'auto', top: 'auto', scale: 1.0 },
+            'btn-shoot': { right: '85px', bottom: '85px', left: 'auto', top: 'auto', scale: 1.0 }
         };
+
+        var elementLayoutConfig = JSON.parse(JSON.stringify(defaultElementPositions));
 
         function loadLayoutConfig() {
             try {
-                var saved = localStorage.getItem('openclaw_touch_layout_v2');
+                var saved = localStorage.getItem('openclaw_touch_layout_v3');
                 if (saved) {
                     var parsed = JSON.parse(saved);
                     Object.assign(elementLayoutConfig, parsed);
@@ -636,7 +692,7 @@
 
         function saveLayoutConfig() {
             try {
-                localStorage.setItem('openclaw_touch_layout_v2', JSON.stringify(elementLayoutConfig));
+                localStorage.setItem('openclaw_touch_layout_v3', JSON.stringify(elementLayoutConfig));
             } catch (err) { console.warn("Could not save layout config:", err); }
         }
 
@@ -655,19 +711,52 @@
             }
         }
 
-        function adjustElementScale(elemId, delta) {
+        function resetControlLayoutToDefault() {
+            elementLayoutConfig = JSON.parse(JSON.stringify(defaultElementPositions));
+            applyLayoutConfig();
+            saveLayoutConfig();
+            hideInlineSizeTooltip();
+            alert("Control layout reset to default positions!");
+        }
+
+        function positionInlineSizeTooltip(el) {
+            var tooltip = document.getElementById('inline-size-tooltip');
+            if (!el || !isEditLayoutMode) {
+                tooltip.style.display = 'none';
+                return;
+            }
+            var rect = el.getBoundingClientRect();
+            var elemId = el.getAttribute('data-element-id');
+            var scale = (elementLayoutConfig[elemId] && elementLayoutConfig[elemId].scale) || 1.0;
+
+            document.getElementById('tooltip-elem-title').innerText = elemId.replace('btn-', '').toUpperCase();
+            document.getElementById('tooltip-elem-pct').innerText = Math.round(scale * 100) + '%';
+
+            tooltip.style.left = Math.max(10, Math.min(window.innerWidth - 130, rect.left + rect.width / 2 - 60)) + 'px';
+            tooltip.style.top = Math.max(10, rect.top - 42) + 'px';
+            tooltip.style.display = 'flex';
+        }
+
+        function hideInlineSizeTooltip() {
+            document.getElementById('inline-size-tooltip').style.display = 'none';
+        }
+
+        function adjustSelectedElementScale(delta) {
+            if (!selectedElementForEdit) return;
+            var elemId = selectedElementForEdit.getAttribute('data-element-id');
             if (!elementLayoutConfig[elemId]) elementLayoutConfig[elemId] = { scale: 1.0 };
             var curScale = elementLayoutConfig[elemId].scale || 1.0;
             var newScale = Math.min(1.8, Math.max(0.6, Math.round((curScale + delta) * 10) / 10));
             elementLayoutConfig[elemId].scale = newScale;
             applyLayoutConfig();
             saveLayoutConfig();
+            positionInlineSizeTooltip(selectedElementForEdit);
         }
 
         function toggleEditLayoutMode() {
             isEditLayoutMode = !isEditLayoutMode;
             var overlay = document.getElementById('touch-controls');
-            var btn = document.getElementById('edit-layout-btn');
+            var btn = document.getElementById('modal-edit-btn');
 
             if (isEditLayoutMode) {
                 overlay.style.display = 'block';
@@ -677,19 +766,18 @@
 
                 document.querySelectorAll('.movable-element').forEach(el => {
                     el.classList.add('edit-mode-active');
-                    var ctrl = el.querySelector('.layout-size-controls');
-                    if (ctrl) ctrl.style.display = 'flex';
                 });
+                toggleSettingsModal(false); // Close settings modal so user can drag controls freely
             } else {
-                btn.innerText = 'Edit Layout ⚙️';
-                btn.style.backgroundColor = '#1f2833';
+                btn.innerText = 'Edit Layout ✏️';
+                btn.style.backgroundColor = '#0b0c10';
                 btn.style.color = '#66fcf1';
 
                 document.querySelectorAll('.movable-element').forEach(el => {
                     el.classList.remove('edit-mode-active');
-                    var ctrl = el.querySelector('.layout-size-controls');
-                    if (ctrl) ctrl.style.display = 'none';
                 });
+                hideInlineSizeTooltip();
+                selectedElementForEdit = null;
 
                 var isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
                 if (touchControlsForcedState === 'auto') {
@@ -705,13 +793,12 @@
             var initialLeft = 0, initialTop = 0;
 
             document.querySelectorAll('.movable-element').forEach(el => {
-                var elemId = el.getAttribute('data-element-id');
-
                 function onDragStart(e) {
                     if (!isEditLayoutMode) return;
-                    if (e.target.closest('.layout-size-controls')) return;
                     e.preventDefault();
                     activeDragEl = el;
+                    selectedElementForEdit = el;
+                    positionInlineSizeTooltip(el);
 
                     var clientX = e.touches ? e.touches[0].clientX : e.clientX;
                     var clientY = e.touches ? e.touches[0].clientY : e.clientY;
@@ -720,9 +807,8 @@
                     dragStartY = clientY;
 
                     var rect = el.getBoundingClientRect();
-                    var containerRect = document.getElementById('game-container').getBoundingClientRect();
-                    initialLeft = rect.left - containerRect.left;
-                    initialTop = rect.top - containerRect.top;
+                    initialLeft = rect.left;
+                    initialTop = rect.top;
                 }
 
                 el.addEventListener('touchstart', onDragStart, { passive: false });
@@ -738,9 +824,8 @@
                 var deltaX = clientX - dragStartX;
                 var deltaY = clientY - dragStartY;
 
-                var containerRect = document.getElementById('game-container').getBoundingClientRect();
-                var newLeft = Math.max(0, Math.min(containerRect.width - 40, initialLeft + deltaX));
-                var newTop = Math.max(0, Math.min(containerRect.height - 40, initialTop + deltaY));
+                var newLeft = Math.max(0, Math.min(window.innerWidth - 30, initialLeft + deltaX));
+                var newTop = Math.max(0, Math.min(window.innerHeight - 30, initialTop + deltaY));
 
                 activeDragEl.style.left = newLeft + 'px';
                 activeDragEl.style.top = newTop + 'px';
@@ -753,6 +838,8 @@
                 elementLayoutConfig[elemId].top = newTop + 'px';
                 elementLayoutConfig[elemId].right = 'auto';
                 elementLayoutConfig[elemId].bottom = 'auto';
+
+                positionInlineSizeTooltip(activeDragEl);
             }
 
             function onDragEnd() {
@@ -769,27 +856,42 @@
         }
 
         // ---------------------------------------------------------------------
-        // 5. Mobile Auto-Resolution & Fullscreen Auto-Hide Controls
+        // 5. Settings Modal, Mobile Auto-Resolution & Fullscreen Behavior
         // ---------------------------------------------------------------------
         var touchControlsForcedState = 'auto';
 
+        function toggleSettingsModal(show) {
+            var modal = document.getElementById('settings-modal');
+            if (show === undefined) show = (modal.style.display !== 'flex');
+            modal.style.display = show ? 'flex' : 'none';
+        }
+
         function toggleTouchControls() {
             var overlay = document.getElementById('touch-controls');
-            var btn = document.getElementById('toggle-touch-btn');
+            var btn = document.getElementById('modal-touch-btn');
             if (touchControlsForcedState === 'auto') {
                 touchControlsForcedState = 'on';
                 overlay.style.display = 'block';
-                btn.innerText = 'Touch Controls: ON';
+                btn.innerText = 'ON';
             } else if (touchControlsForcedState === 'on') {
                 touchControlsForcedState = 'off';
                 overlay.style.display = 'none';
-                btn.innerText = 'Touch Controls: OFF';
+                btn.innerText = 'OFF';
             } else {
                 touchControlsForcedState = 'auto';
                 var isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
                 overlay.style.display = isTouch ? 'block' : 'none';
-                btn.innerText = 'Touch Controls: AUTO';
+                btn.innerText = 'AUTO';
             }
+        }
+
+        function toggleFullscreenMode() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => console.warn(err));
+            } else {
+                document.exitFullscreen().catch(err => console.warn(err));
+            }
+            toggleSettingsModal(false);
         }
 
         function setupMobileResolutionAndFullscreen() {
