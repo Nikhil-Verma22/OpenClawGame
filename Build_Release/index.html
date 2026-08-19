@@ -202,7 +202,7 @@
             left: 0;
             width: 100vw;
             height: 100vh;
-            pointer-events: none;
+            pointer-events: auto;
             z-index: 100;
             display: none;
         }
@@ -258,7 +258,7 @@
             text-transform: uppercase;
         }
 
-        /* 8-Direction Virtual Joystick */
+        /* Dynamic Floating 8-Direction Virtual Joystick */
         #joystick-container {
             position: absolute;
             width: 130px;
@@ -274,6 +274,12 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+
+        #joystick-container.active-drag {
+            border-color: #00ffaa !important;
+            box-shadow: 0 0 20px rgba(0, 255, 170, 0.6), inset 0 0 15px rgba(0, 255, 170, 0.3) !important;
         }
 
         #joystick-knob {
@@ -438,7 +444,7 @@
         <button id="btn-esc" class="touch-btn touch-btn-util movable-element" data-element-id="btn-esc" title="Pause / Menu">⏸️ PAUSE</button>
         <button id="btn-enter" class="touch-btn touch-btn-util movable-element" data-element-id="btn-enter" title="Select / Confirm">⏎ ENTER</button>
 
-        <!-- 8-Direction Virtual Joystick -->
+        <!-- Dynamic Floating 8-Direction Virtual Joystick -->
         <div id="joystick-container" class="movable-element" data-element-id="joystick">
             <div class="joy-sector joy-n">▲</div>
             <div class="joy-sector joy-s">▼</div>
@@ -497,25 +503,30 @@
         }
 
         // ---------------------------------------------------------------------
-        // 2. 8-Direction Virtual Joystick Implementation
+        // 2. Dynamic Floating 8-Direction Joystick with 20% Crouch Threshold
         // ---------------------------------------------------------------------
         var joystickContainer = document.getElementById('joystick-container');
         var joystickKnob = document.getElementById('joystick-knob');
         var isJoystickActive = false;
         var joystickTouchId = null;
 
-        function updateJoystickDirection(angleDeg, distance) {
+        function updateJoystickDirection(angleDeg, distance, maxRadius) {
             var newKeys = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
 
-            if (distance >= 12) {
+            var normalMinDistance = 10;
+            var crouchMinDistance = maxRadius * 0.20; // Require 20% radius threshold for Crouch!
+
+            if (distance >= normalMinDistance) {
                 if (angleDeg >= -22.5 && angleDeg < 22.5) {
                     newKeys.ArrowRight = true;
                 } else if (angleDeg >= 22.5 && angleDeg < 67.5) {
-                    newKeys.ArrowDown = true; newKeys.ArrowRight = true;
+                    if (distance >= crouchMinDistance) newKeys.ArrowDown = true;
+                    newKeys.ArrowRight = true;
                 } else if (angleDeg >= 67.5 && angleDeg < 112.5) {
-                    newKeys.ArrowDown = true;
+                    if (distance >= crouchMinDistance) newKeys.ArrowDown = true;
                 } else if (angleDeg >= 112.5 && angleDeg < 157.5) {
-                    newKeys.ArrowDown = true; newKeys.ArrowLeft = true;
+                    if (distance >= crouchMinDistance) newKeys.ArrowDown = true;
+                    newKeys.ArrowLeft = true;
                 } else if (angleDeg >= 157.5 || angleDeg < -157.5) {
                     newKeys.ArrowLeft = true;
                 } else if (angleDeg >= -157.5 && angleDeg < -112.5) {
@@ -539,6 +550,7 @@
             isJoystickActive = false;
             joystickTouchId = null;
             joystickKnob.style.transform = `translate(0px, 0px)`;
+            joystickContainer.classList.remove('active-drag');
             for (var keyName in activeJoystickKeys) {
                 if (activeJoystickKeys[keyName]) {
                     activeJoystickKeys[keyName] = false;
@@ -566,15 +578,48 @@
             var knobY = clampedDistance * Math.sin(angleRad);
 
             joystickKnob.style.transform = `translate(${knobX}px, ${knobY}px)`;
-            updateJoystickDirection(angleDeg, distance);
+            updateJoystickDirection(angleDeg, distance, maxRadius);
         }
 
+        // Touch-Anywhere Floating Joystick Placement on Left Screen Half
+        var touchControlsOverlay = document.getElementById('touch-controls');
+
+        touchControlsOverlay.addEventListener('touchstart', function (e) {
+            if (isEditLayoutMode || isJoystickActive) return;
+            var touch = e.changedTouches[0];
+            
+            // Check if touch target is another interactive button or settings gear
+            if (touch.target.closest('.touch-btn') && !touch.target.closest('#joystick-container')) return;
+            if (touch.target.closest('#settings-gear-btn') || touch.target.closest('#settings-modal')) return;
+
+            // Touch anywhere on left half of screen (clientX < window.innerWidth * 0.55)
+            if (touch.clientX < window.innerWidth * 0.55) {
+                e.preventDefault();
+                var joyWidth = joystickContainer.offsetWidth || 130;
+                var joyHeight = joystickContainer.offsetHeight || 130;
+
+                var newLeft = Math.max(10, Math.min(window.innerWidth * 0.55 - joyWidth, touch.clientX - joyWidth / 2));
+                var newTop = Math.max(10, Math.min(window.innerHeight - joyHeight - 10, touch.clientY - joyHeight / 2));
+
+                joystickContainer.style.left = newLeft + 'px';
+                joystickContainer.style.top = newTop + 'px';
+                joystickContainer.style.right = 'auto';
+                joystickContainer.style.bottom = 'auto';
+                joystickContainer.classList.add('active-drag');
+
+                joystickTouchId = touch.identifier;
+                isJoystickActive = true;
+                handleJoystickMove(touch.clientX, touch.clientY);
+            }
+        }, { passive: false });
+
         joystickContainer.addEventListener('touchstart', function (e) {
-            if (isEditLayoutMode) return;
+            if (isEditLayoutMode || isJoystickActive) return;
             e.preventDefault();
             var touch = e.changedTouches[0];
             joystickTouchId = touch.identifier;
             isJoystickActive = true;
+            joystickContainer.classList.add('active-drag');
             handleJoystickMove(touch.clientX, touch.clientY);
         }, { passive: false });
 
@@ -604,6 +649,7 @@
         joystickContainer.addEventListener('mousedown', function (e) {
             if (isEditLayoutMode) return;
             isJoystickActive = true;
+            joystickContainer.classList.add('active-drag');
             handleJoystickMove(e.clientX, e.clientY);
         });
 
@@ -767,7 +813,7 @@
                 document.querySelectorAll('.movable-element').forEach(el => {
                     el.classList.add('edit-mode-active');
                 });
-                toggleSettingsModal(false); // Close settings modal so user can drag controls freely
+                toggleSettingsModal(false);
             } else {
                 btn.innerText = 'Edit Layout ✏️';
                 btn.style.backgroundColor = '#0b0c10';
