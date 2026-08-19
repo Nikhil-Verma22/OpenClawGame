@@ -40,4 +40,6 @@ build-wasm/
 openclaw.data
 openclaw.wasm
 CLAW.REZ
+*.sdf
+
 

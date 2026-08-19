@@ -19,6 +19,9 @@
             justify-content: center;
             min-height: 100vh;
             text-align: center;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
         }
 
         h1 {
@@ -42,19 +45,22 @@
             overflow: hidden;
             background-color: #000;
             border: 2px solid #1f2833;
+            width: 640px;
+            height: 480px;
+            max-width: 100vw;
         }
 
         #canvas {
             display: none;
-            width: 640px;
-            height: 480px;
+            width: 100%;
+            height: 100%;
             background-color: #000;
             outline: none;
         }
 
         #loading-screen {
-            width: 640px;
-            height: 480px;
+            width: 100%;
+            height: 100%;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -102,10 +108,130 @@
             font-size: 0.85rem;
         }
 
+        /* Translucent Touch Controls Overlay */
+        .touch-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+            display: none; /* Show if touch detected or manually toggled */
+            box-sizing: border-box;
+            padding: 10px;
+        }
+
+        .touch-btn {
+            pointer-events: auto;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+            background: rgba(15, 25, 35, 0.45);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border: 1.5px solid rgba(69, 243, 255, 0.4);
+            color: #45f3ff;
+            font-weight: bold;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4), inset 0 0 10px rgba(69, 243, 255, 0.1);
+            transition: background 0.1s, transform 0.05s, border-color 0.1s;
+        }
+
+        .touch-btn:active, .touch-btn.active {
+            background: rgba(69, 243, 255, 0.7) !important;
+            color: #0b0c10 !important;
+            border-color: #00ffaa !important;
+            transform: scale(0.92);
+            box-shadow: 0 0 20px rgba(69, 243, 255, 0.9);
+        }
+
+        .touch-top-bar {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none;
+        }
+
+        .touch-btn-util {
+            padding: 6px 14px;
+            font-size: 0.75rem;
+            border-radius: 20px;
+            letter-spacing: 0.5px;
+        }
+
+        /* D-Pad Cluster (Left Side) */
+        .dpad-cluster {
+            position: absolute;
+            bottom: 15px;
+            left: 15px;
+            width: 140px;
+            height: 140px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .dpad-row {
+            display: flex;
+            width: 100%;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .dpad-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            font-size: 1.1rem;
+        }
+
+        .dpad-center {
+            width: 44px;
+            height: 44px;
+        }
+
+        /* Action Cluster (Right Side) */
+        .action-cluster {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .action-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .action-btn {
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            font-size: 1.1rem;
+        }
+
+        .btn-label {
+            font-size: 0.5rem;
+            letter-spacing: 0.5px;
+            margin-top: 1px;
+            opacity: 0.95;
+            text-transform: uppercase;
+        }
+
         .controls-bar {
             margin-top: 15px;
             display: flex;
-            gap: 15px;
+            gap: 12px;
             align-items: center;
             flex-wrap: wrap;
             justify-content: center;
@@ -165,10 +291,42 @@
         </div>
 
         <canvas id="canvas" width="640" height="480" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+
+        <!-- Translucent Mobile Touch Controls -->
+        <div id="touch-controls" class="touch-overlay">
+            <div class="touch-top-bar">
+                <button id="btn-esc" class="touch-btn touch-btn-util" title="Pause / Menu">⏸️ PAUSE</button>
+                <button id="btn-enter" class="touch-btn touch-btn-util" title="Select / Confirm">⏎ ENTER</button>
+            </div>
+
+            <!-- Left D-Pad -->
+            <div class="dpad-cluster">
+                <button id="btn-up" class="touch-btn dpad-btn" title="Up / Climb">▲</button>
+                <div class="dpad-row">
+                    <button id="btn-left" class="touch-btn dpad-btn" title="Left">◀</button>
+                    <div class="dpad-center"></div>
+                    <button id="btn-right" class="touch-btn dpad-btn" title="Right">▶</button>
+                </div>
+                <button id="btn-down" class="touch-btn dpad-btn" title="Down / Crouch">▼</button>
+            </div>
+
+            <!-- Right Action Cluster -->
+            <div class="action-cluster">
+                <div class="action-row">
+                    <button id="btn-shoot" class="touch-btn action-btn" title="Pistol / Shoot">🔫<span class="btn-label">SHOOT</span></button>
+                    <button id="btn-magic" class="touch-btn action-btn" title="Magic / Dynamite">💣<span class="btn-label">BOMB</span></button>
+                </div>
+                <div class="action-row">
+                    <button id="btn-sword" class="touch-btn action-btn" title="Sword / Melee">⚔️<span class="btn-label">ATTACK</span></button>
+                    <button id="btn-jump" class="touch-btn action-btn" title="Jump">🦘<span class="btn-label">JUMP</span></button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="controls-bar">
         <button onclick="Module.canvas.requestFullscreen()">Fullscreen</button>
+        <button id="toggle-touch-btn" onclick="toggleTouchControls()">Touch Controls: AUTO</button>
         
         <label for="res">Resolution:</label>
         <select id="res" onchange="CheatCodeManager.winsize = this.value; CheatCodeManager.resize()">
@@ -190,6 +348,114 @@
     </div>
 
     <textarea id="console" readonly></textarea>
+
+    <script type="text/javascript">
+        // Virtual Key Input Simulation for Mobile Touch Controls
+        var touchState = {};
+
+        function simulateKey(code, key, isDown) {
+            var eventType = isDown ? 'keydown' : 'keyup';
+            var keyCodeMap = {
+                'ArrowLeft': 37,
+                'ArrowUp': 38,
+                'ArrowRight': 39,
+                'ArrowDown': 40,
+                'Space': 32,
+                'ControlLeft': 17,
+                'AltLeft': 18,
+                'KeyZ': 90,
+                'Escape': 27,
+                'Enter': 13
+            };
+            var keyCode = keyCodeMap[code] || 0;
+
+            var event = new KeyboardEvent(eventType, {
+                key: key,
+                code: code,
+                keyCode: keyCode,
+                which: keyCode,
+                bubbles: true,
+                cancelable: true,
+                view: window
+            });
+
+            var target = document.getElementById('canvas') || window;
+            target.dispatchEvent(event);
+            window.dispatchEvent(event);
+        }
+
+        function bindTouchBtn(id, code, key) {
+            var btn = document.getElementById(id);
+            if (!btn) return;
+
+            function press(e) {
+                if (e) e.preventDefault();
+                btn.classList.add('active');
+                touchState[id] = true;
+                simulateKey(code, key, true);
+            }
+
+            function release(e) {
+                if (e) e.preventDefault();
+                btn.classList.remove('active');
+                if (touchState[id]) {
+                    touchState[id] = false;
+                    simulateKey(code, key, false);
+                }
+            }
+
+            btn.addEventListener('touchstart', press, { passive: false });
+            btn.addEventListener('touchend', release, { passive: false });
+            btn.addEventListener('touchcancel', release, { passive: false });
+
+            btn.addEventListener('mousedown', press);
+            btn.addEventListener('mouseup', release);
+            btn.addEventListener('mouseleave', release);
+        }
+
+        function setupTouchControls() {
+            bindTouchBtn('btn-up', 'ArrowUp', 'ArrowUp');
+            bindTouchBtn('btn-left', 'ArrowLeft', 'ArrowLeft');
+            bindTouchBtn('btn-right', 'ArrowRight', 'ArrowRight');
+            bindTouchBtn('btn-down', 'ArrowDown', 'ArrowDown');
+
+            bindTouchBtn('btn-jump', 'Space', ' ');
+            bindTouchBtn('btn-sword', 'ControlLeft', 'Control');
+            bindTouchBtn('btn-shoot', 'AltLeft', 'Alt');
+            bindTouchBtn('btn-magic', 'KeyZ', 'z');
+
+            bindTouchBtn('btn-esc', 'Escape', 'Escape');
+            bindTouchBtn('btn-enter', 'Enter', 'Enter');
+
+            // Auto-detect mobile / touch screen
+            var isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0);
+            if (isTouch) {
+                document.getElementById('touch-controls').style.display = 'block';
+            }
+        }
+
+        var touchControlsForcedState = 'auto';
+        function toggleTouchControls() {
+            var overlay = document.getElementById('touch-controls');
+            var btn = document.getElementById('toggle-touch-btn');
+            if (touchControlsForcedState === 'auto') {
+                touchControlsForcedState = 'on';
+                overlay.style.display = 'block';
+                btn.innerText = 'Touch Controls: ON';
+            } else if (touchControlsForcedState === 'on') {
+                touchControlsForcedState = 'off';
+                overlay.style.display = 'none';
+                btn.innerText = 'Touch Controls: OFF';
+            } else {
+                touchControlsForcedState = 'auto';
+                var isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+                overlay.style.display = isTouch ? 'block' : 'none';
+                btn.innerText = 'Touch Controls: AUTO';
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', setupTouchControls);
+    </script>
 
     <script type="text/javascript">
         // Cheat Code & Console Helpers
