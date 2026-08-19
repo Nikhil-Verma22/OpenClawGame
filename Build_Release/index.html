@@ -1,0 +1,464 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>OpenClaw - Captain Claw (1997)</title>
+    <meta name="description" content="Reimplementation of Captain Claw (1997) platformer in WebAssembly">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <style>
+        body {
+            background-color: #0b0c10;
+            color: #c5c6c7;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            text-align: center;
+        }
+
+        h1 {
+            color: #66fcf1;
+            margin-bottom: 5px;
+            font-size: 1.8rem;
+            text-shadow: 0 0 10px rgba(102, 252, 241, 0.3);
+        }
+
+        p.subtitle {
+            color: #8892b0;
+            margin-top: 0;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+        }
+
+        #game-container {
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+            border-radius: 8px;
+            overflow: hidden;
+            background-color: #000;
+            border: 2px solid #1f2833;
+        }
+
+        #canvas {
+            display: none;
+            width: 640px;
+            height: 480px;
+            background-color: #000;
+            outline: none;
+        }
+
+        #loading-screen {
+            width: 640px;
+            height: 480px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #1f2833 0%, #0b0c10 100%);
+            padding: 30px;
+            box-sizing: border-box;
+        }
+
+        .claw-logo {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #45f3ff;
+            margin-bottom: 25px;
+            letter-spacing: 2px;
+        }
+
+        #status-text {
+            color: #45f3ff;
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+
+        .progress-bar-container {
+            width: 80%;
+            height: 18px;
+            background-color: #0b0c10;
+            border-radius: 9px;
+            overflow: hidden;
+            border: 1px solid #45f3ff;
+            box-shadow: 0 0 8px rgba(69, 243, 255, 0.2);
+            margin-bottom: 12px;
+        }
+
+        #progress-bar {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #45f3ff 0%, #00ffaa 100%);
+            transition: width 0.15s ease-out;
+        }
+
+        #progress-details {
+            color: #8892b0;
+            font-size: 0.85rem;
+        }
+
+        .controls-bar {
+            margin-top: 15px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        button, select {
+            background-color: #1f2833;
+            color: #66fcf1;
+            border: 1px solid #45f3ff;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+
+        button:hover, select:hover {
+            background-color: #45f3ff;
+            color: #0b0c10;
+            box-shadow: 0 0 10px rgba(69, 243, 255, 0.5);
+        }
+
+        label {
+            font-size: 0.85rem;
+            color: #c5c6c7;
+        }
+
+        #console {
+            width: 640px;
+            height: 120px;
+            background-color: #050505;
+            color: #00ffaa;
+            font-family: monospace;
+            font-size: 0.75rem;
+            border: 1px solid #1f2833;
+            margin-top: 15px;
+            padding: 8px;
+            box-sizing: border-box;
+            display: none;
+            overflow-y: scroll;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>OpenClaw WebAssembly</h1>
+    <p class="subtitle">Captain Claw (1997) Reimplementation in Browser</p>
+
+    <div id="game-container">
+        <div id="loading-screen">
+            <div class="claw-logo">CAPTAIN CLAW</div>
+            <div id="status-text">Initializing asset assembly...</div>
+            <div class="progress-bar-container">
+                <div id="progress-bar"></div>
+            </div>
+            <div id="progress-details">Connecting...</div>
+        </div>
+
+        <canvas id="canvas" width="640" height="480" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+    </div>
+
+    <div class="controls-bar">
+        <button onclick="Module.canvas.requestFullscreen()">Fullscreen</button>
+        
+        <label for="res">Resolution:</label>
+        <select id="res" onchange="CheatCodeManager.winsize = this.value; CheatCodeManager.resize()">
+            <option value="640 480">640x480</option>
+            <option value="800 600">800x600</option>
+            <option value="1024 768">1024x768</option>
+            <option value="1280 960">1280x960</option>
+        </select>
+
+        <label for="scale">Scale:</label>
+        <select id="scale" onchange="CheatCodeManager.scale = this.value; CheatCodeManager.resize()">
+            <option value="-1">Original</option>
+            <option value="1">1x</option>
+            <option value="1.5">1.5x</option>
+            <option value="2">2x</option>
+        </select>
+
+        <button onclick="toggleDebugConsole()">Toggle Log Console</button>
+    </div>
+
+    <textarea id="console" readonly></textarea>
+
+    <script type="text/javascript">
+        // Cheat Code & Console Helpers
+        var CheatCodeManager = {
+            winsize: "640 480",
+            scale: -1,
+            pushEvent: function (key, event, target) {
+                return target.dispatchEvent(new KeyboardEvent(event, {
+                    'keyCode': key, 'charCode': key, 'view': window, 'bubbles': true, 'cancelable': true
+                }));
+            },
+            click: function (key, target) {
+                if (CheatCodeManager.pushEvent(key, 'keydown', target)) {
+                    CheatCodeManager.pushEvent(key, 'keypress', target);
+                }
+                CheatCodeManager.pushEvent(key, 'keyup', target);
+            },
+            openOrCloseConsole: function (target) {
+                CheatCodeManager.click(192, target);
+                CheatCodeManager.click(8, target);
+                CheatCodeManager.click(8, target);
+            },
+            write: function (cheat, target) {
+                CheatCodeManager.openOrCloseConsole(target);
+                for (var i = 0; i < cheat.length; i++) {
+                    CheatCodeManager.click(cheat.charCodeAt(i), target);
+                }
+                CheatCodeManager.click(13, target);
+                CheatCodeManager.openOrCloseConsole(target);
+            },
+            resize: function () {
+                CheatCodeManager.write("WINRESIZE " + CheatCodeManager.winsize + " " + CheatCodeManager.scale, Module.canvas);
+                var width = parseInt(CheatCodeManager.winsize.split(" ")[0]);
+                var height = parseInt(CheatCodeManager.winsize.split(" ")[1]);
+                var scale = parseFloat(CheatCodeManager.scale);
+                window.localStorage.setItem("width", width);
+                window.localStorage.setItem("height", height);
+                window.localStorage.setItem("scale", scale);
+            }
+        };
+
+        function toggleDebugConsole() {
+            var c = document.getElementById('console');
+            c.style.display = (c.style.display === 'none' || !c.style.display) ? 'block' : 'none';
+        }
+
+        var Console = {
+            elem: document.getElementById('console'),
+            printToConsole: function (text) {
+                if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
+                console.log(text);
+                if (Console.elem) {
+                    Console.elem.value += text + "\n";
+                    Console.elem.scrollTop = Console.elem.scrollHeight;
+                }
+            }
+        };
+
+        // IndexedDB Cache Helper for openclaw.data
+        var DB_NAME = 'OpenClawAssetsDB';
+        var DB_VERSION = 1;
+        var STORE_NAME = 'assets';
+
+        function openDB() {
+            return new Promise(function (resolve, reject) {
+                var request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onupgradeneeded = function (e) {
+                    var db = e.target.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        db.createObjectStore(STORE_NAME);
+                    }
+                };
+                request.onsuccess = function (e) { resolve(e.target.result); };
+                request.onerror = function (e) { reject(e); };
+            });
+        }
+
+        function getCachedAsset(key) {
+            return openDB().then(function (db) {
+                return new Promise(function (resolve, reject) {
+                    var tx = db.transaction(STORE_NAME, 'readonly');
+                    var store = tx.objectStore(STORE_NAME);
+                    var request = store.get(key);
+                    request.onsuccess = function () { resolve(request.result); };
+                    request.onerror = function (e) { reject(e); };
+                });
+            }).catch(function () { return null; });
+        }
+
+        function setCachedAsset(key, data) {
+            return openDB().then(function (db) {
+                return new Promise(function (resolve, reject) {
+                    var tx = db.transaction(STORE_NAME, 'readwrite');
+                    var store = tx.objectStore(STORE_NAME);
+                    var request = store.put(data, key);
+                    request.onsuccess = function () { resolve(); };
+                    request.onerror = function (e) { reject(e); };
+                });
+            }).catch(function (err) { console.warn("Failed to cache in IndexedDB:", err); });
+        }
+    </script>
+
+    <script type="text/javascript">
+        var loadingScreen = document.getElementById("loading-screen");
+        var statusText = document.getElementById("status-text");
+        var progressBar = document.getElementById("progress-bar");
+        var progressDetails = document.getElementById("progress-details");
+        var canvas = document.getElementById("canvas");
+
+        var compiledDataBuffer = null;
+        var compiledWasmBuffer = null;
+
+        var Module = {
+            preRun: [function () {
+                if (loadingScreen) loadingScreen.style.display = "none";
+                canvas.style.display = "block";
+            }],
+            canvas: (function () {
+                canvas.addEventListener("webglcontextlost", function (e) {
+                    alert('WebGL context lost. Please reload the page.');
+                    e.preventDefault();
+                }, false);
+                return canvas;
+            })(),
+            setStatus: function (text) {
+                if (text && statusText) {
+                    statusText.innerText = text;
+                }
+            },
+            print: Console.printToConsole,
+            printErr: Console.printToConsole
+        };
+
+        function updateProgress(text, loadedBytes, totalBytes) {
+            statusText.innerText = text;
+            if (totalBytes > 0) {
+                var pct = Math.min(100, Math.round((loadedBytes / totalBytes) * 100));
+                progressBar.style.width = pct + "%";
+                var loadedMB = (loadedBytes / (1024 * 1024)).toFixed(1);
+                var totalMB = (totalBytes / (1024 * 1024)).toFixed(1);
+                progressDetails.innerText = loadedMB + " MB / " + totalMB + " MB (" + pct + "%)";
+            }
+        }
+
+        async function fetchPartWithProgress(partUrl, onProgress) {
+            var response = await fetch(partUrl);
+            if (!response.ok) throw new Error("Failed to fetch " + partUrl + ": " + response.statusText);
+            
+            var contentLength = response.headers.get("content-length");
+            var total = contentLength ? parseInt(contentLength, 10) : 0;
+            var reader = response.body.getReader();
+            var chunks = [];
+            var received = 0;
+
+            while (true) {
+                var res = await reader.read();
+                if (res.done) break;
+                chunks.push(res.value);
+                received += res.value.length;
+                if (onProgress) onProgress(res.value.length, total);
+            }
+
+            var concatenated = new Uint8Array(received);
+            var offset = 0;
+            for (var chunk of chunks) {
+                concatenated.set(chunk, offset);
+                offset += chunk.length;
+            }
+            return concatenated;
+        }
+
+        async function fetchAndAssembleParts(partsList, expectedTotalSize, label, overallOffset, totalOverallBytes, onOverallProgress) {
+            var combined = new Uint8Array(expectedTotalSize);
+            var currentWriteOffset = 0;
+
+            for (var i = 0; i < partsList.length; i++) {
+                var partName = partsList[i];
+                var partData = await fetchPartWithProgress(partName, function (bytesRead) {
+                    if (onOverallProgress) onOverallProgress(bytesRead);
+                });
+                combined.set(partData, currentWriteOffset);
+                currentWriteOffset += partData.length;
+            }
+            return combined;
+        }
+
+        async function startAssetLoadingAndLaunch() {
+            try {
+                updateProgress("Loading manifest...", 0, 100);
+                var manifestRes = await fetch("manifest.json");
+                if (!manifestRes.ok) throw new Error("Failed to load manifest.json");
+                var manifest = await manifestRes.json();
+
+                var totalDownloadBytes = manifest.wasmSize + manifest.dataSize;
+                var totalDownloadedSoFar = 0;
+
+                // 1. Check IndexedDB for cached openclaw.data
+                updateProgress("Checking browser cache...", 0, totalDownloadBytes);
+                var cachedData = await getCachedAsset("openclaw.data_v1");
+
+                if (cachedData && cachedData.byteLength === manifest.dataSize) {
+                    console.log("Found valid cached openclaw.data in IndexedDB (" + cachedData.byteLength + " bytes)");
+                    compiledDataBuffer = new Uint8Array(cachedData);
+                    totalDownloadedSoFar += manifest.dataSize;
+                } else {
+                    console.log("Downloading openclaw.data chunks...");
+                    compiledDataBuffer = await fetchAndAssembleParts(
+                        manifest.dataParts,
+                        manifest.dataSize,
+                        "Game Assets (data)",
+                        totalDownloadedSoFar,
+                        totalDownloadBytes,
+                        function (bytesRead) {
+                            totalDownloadedSoFar += bytesRead;
+                            updateProgress("Downloading game assets...", totalDownloadedSoFar, totalDownloadBytes);
+                        }
+                    );
+                    // Store in IndexedDB cache asynchronously
+                    setCachedAsset("openclaw.data_v1", compiledDataBuffer.buffer);
+                }
+
+                // 2. Download WASM parts
+                updateProgress("Downloading WebAssembly engine...", totalDownloadedSoFar, totalDownloadBytes);
+                compiledWasmBuffer = await fetchAndAssembleParts(
+                    manifest.wasmParts,
+                    manifest.wasmSize,
+                    "Engine (WASM)",
+                    totalDownloadedSoFar,
+                    totalDownloadBytes,
+                    function (bytesRead) {
+                        totalDownloadedSoFar += bytesRead;
+                        updateProgress("Downloading WebAssembly engine...", totalDownloadedSoFar, totalDownloadBytes);
+                    }
+                );
+
+                updateProgress("Initializing WebAssembly runtime...", totalDownloadBytes, totalDownloadBytes);
+
+                // 3. Inject compiled buffers into Emscripten Module
+                Module['wasmBinary'] = compiledWasmBuffer.buffer;
+                Module['getPreloadedPackage'] = function (packageName, packageSize) {
+                    return compiledDataBuffer.buffer;
+                };
+
+                // 4. Load openclaw.js
+                var script = document.createElement("script");
+                script.async = true;
+                script.type = "text/javascript";
+                script.src = "openclaw.js";
+                script.onerror = function (err) {
+                    console.error("Failed to load openclaw.js", err);
+                    updateProgress("Failed to launch openclaw.js script", 0, 0);
+                };
+                document.body.appendChild(script);
+
+            } catch (err) {
+                console.error("Asset loading error:", err);
+                updateProgress("Error: " + err.message, 0, 0);
+            }
+        }
+
+        if (window.localStorage.width && window.localStorage.height && window.localStorage.scale) {
+            document.getElementById('res').value = window.localStorage.width + " " + window.localStorage.height;
+            document.getElementById('scale').value = window.localStorage.scale;
+            CheatCodeManager.winsize = window.localStorage.width + " " + window.localStorage.height;
+            CheatCodeManager.scale = window.localStorage.scale;
+        }
+
+        // Start loading pipeline
+        startAssetLoadingAndLaunch();
+    </script>
+</body>
+</html>

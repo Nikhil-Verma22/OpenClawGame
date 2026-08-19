@@ -32,3 +32,12 @@ Build_Release/vim.exe.stackdump
 *.iobj
 *.ipdb
 *.exp
+Build_Release/openclaw.data
+Build_Release/openclaw.html
+Build_Release/openclaw.js
+Build_Release/openclaw.wasm
+build-wasm/
+openclaw.data
+openclaw.wasm
+CLAW.REZ
+

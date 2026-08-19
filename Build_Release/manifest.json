@@ -1,0 +1,16 @@
+{
+  "wasmParts": [
+    "openclaw.wasm.part00",
+    "openclaw.wasm.part01"
+  ],
+  "wasmSize": 37233974,
+  "dataParts": [
+    "openclaw.data.part00",
+    "openclaw.data.part01",
+    "openclaw.data.part02",
+    "openclaw.data.part03",
+    "openclaw.data.part04",
+    "openclaw.data.part05"
+  ],
+  "dataSize": 118647452
+}
