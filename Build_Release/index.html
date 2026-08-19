@@ -117,9 +117,8 @@
             height: 100%;
             pointer-events: none;
             z-index: 10;
-            display: none; /* Show if touch detected or manually toggled */
+            display: none;
             box-sizing: border-box;
-            padding: 10px;
         }
 
         .touch-btn {
@@ -149,6 +148,7 @@
             box-shadow: 0 0 20px rgba(69, 243, 255, 0.9);
         }
 
+        /* Top Bar Controls */
         .touch-top-bar {
             position: absolute;
             top: 10px;
@@ -156,7 +156,8 @@
             right: 10px;
             display: flex;
             justify-content: space-between;
-            pointer-events: none;
+            pointer-events: auto;
+            transform-origin: top left;
         }
 
         .touch-btn-util {
@@ -166,46 +167,62 @@
             letter-spacing: 0.5px;
         }
 
-        /* D-Pad Cluster (Left Side) */
-        .dpad-cluster {
+        /* 8-Direction Virtual Joystick */
+        #joystick-container {
             position: absolute;
-            bottom: 15px;
-            left: 15px;
-            width: 140px;
-            height: 140px;
+            bottom: 20px;
+            left: 20px;
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            background: rgba(15, 25, 35, 0.45);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border: 2px solid rgba(69, 243, 255, 0.4);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5), inset 0 0 15px rgba(69, 243, 255, 0.15);
+            pointer-events: auto;
+            touch-action: none;
             display: flex;
-            flex-direction: column;
             align-items: center;
-            justify-content: space-between;
+            justify-content: center;
+            transform-origin: bottom left;
         }
 
-        .dpad-row {
-            display: flex;
-            width: 100%;
-            justify-content: space-between;
-            align-items: center;
+        #joystick-knob {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #45f3ff 0%, #0088aa 100%);
+            border: 2px solid #66fcf1;
+            box-shadow: 0 0 12px rgba(69, 243, 255, 0.8);
+            position: absolute;
+            pointer-events: none;
+            transition: transform 0.05s ease-out;
         }
 
-        .dpad-btn {
-            width: 44px;
-            height: 44px;
-            border-radius: 12px;
-            font-size: 1.1rem;
+        /* Directional Indicator Lines inside Joystick */
+        .joy-sector {
+            position: absolute;
+            color: rgba(69, 243, 255, 0.35);
+            font-size: 0.7rem;
+            font-weight: bold;
+            pointer-events: none;
         }
+        .joy-n { top: 6px; }
+        .joy-s { bottom: 6px; }
+        .joy-w { left: 8px; }
+        .joy-e { right: 8px; }
 
-        .dpad-center {
-            width: 44px;
-            height: 44px;
-        }
-
-        /* Action Cluster (Right Side) */
+        /* Right Action Cluster */
         .action-cluster {
             position: absolute;
-            bottom: 15px;
-            right: 15px;
+            bottom: 20px;
+            right: 20px;
             display: flex;
             flex-direction: column;
             gap: 10px;
+            pointer-events: auto;
+            transform-origin: bottom right;
         }
 
         .action-row {
@@ -214,8 +231,8 @@
         }
 
         .action-btn {
-            width: 54px;
-            height: 54px;
+            width: 56px;
+            height: 56px;
             border-radius: 50%;
             font-size: 1.1rem;
         }
@@ -226,6 +243,39 @@
             margin-top: 1px;
             opacity: 0.95;
             text-transform: uppercase;
+        }
+
+        /* Edit Layout Handles */
+        .edit-mode-active {
+            border: 2px dashed #00ffaa !important;
+            background: rgba(0, 255, 170, 0.15) !important;
+        }
+
+        .layout-size-controls {
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: none;
+            background: #1f2833;
+            border: 1px solid #00ffaa;
+            border-radius: 12px;
+            padding: 2px 6px;
+            gap: 6px;
+            font-size: 0.7rem;
+            color: #00ffaa;
+            z-index: 20;
+            white-space: nowrap;
+        }
+
+        .layout-size-btn {
+            background: #0b0c10;
+            color: #66fcf1;
+            border: 1px solid #45f3ff;
+            border-radius: 4px;
+            padding: 1px 6px;
+            cursor: pointer;
+            font-size: 0.75rem;
         }
 
         .controls-bar {
@@ -294,24 +344,34 @@
 
         <!-- Translucent Mobile Touch Controls -->
         <div id="touch-controls" class="touch-overlay">
-            <div class="touch-top-bar">
+            <div id="top-bar-cluster" class="touch-top-bar movable-element" data-element-id="top-bar">
                 <button id="btn-esc" class="touch-btn touch-btn-util" title="Pause / Menu">⏸️ PAUSE</button>
                 <button id="btn-enter" class="touch-btn touch-btn-util" title="Select / Confirm">⏎ ENTER</button>
+
+                <div class="layout-size-controls">
+                    <span>Top Bar</span>
+                    <button class="layout-size-btn" onclick="adjustElementScale('top-bar', -0.1)">-</button>
+                    <button class="layout-size-btn" onclick="adjustElementScale('top-bar', 0.1)">+</button>
+                </div>
             </div>
 
-            <!-- Left D-Pad -->
-            <div class="dpad-cluster">
-                <button id="btn-up" class="touch-btn dpad-btn" title="Up / Climb">▲</button>
-                <div class="dpad-row">
-                    <button id="btn-left" class="touch-btn dpad-btn" title="Left">◀</button>
-                    <div class="dpad-center"></div>
-                    <button id="btn-right" class="touch-btn dpad-btn" title="Right">▶</button>
+            <!-- 8-Direction Virtual Joystick -->
+            <div id="joystick-container" class="movable-element" data-element-id="joystick">
+                <div class="joy-sector joy-n">▲</div>
+                <div class="joy-sector joy-s">▼</div>
+                <div class="joy-sector joy-w">◀</div>
+                <div class="joy-sector joy-e">▶</div>
+                <div id="joystick-knob"></div>
+
+                <div class="layout-size-controls">
+                    <span>Joystick</span>
+                    <button class="layout-size-btn" onclick="adjustElementScale('joystick', -0.1)">-</button>
+                    <button class="layout-size-btn" onclick="adjustElementScale('joystick', 0.1)">+</button>
                 </div>
-                <button id="btn-down" class="touch-btn dpad-btn" title="Down / Crouch">▼</button>
             </div>
 
             <!-- Right Action Cluster -->
-            <div class="action-cluster">
+            <div id="action-cluster-container" class="action-cluster movable-element" data-element-id="action-cluster">
                 <div class="action-row">
                     <button id="btn-shoot" class="touch-btn action-btn" title="Pistol / Shoot">🔫<span class="btn-label">SHOOT</span></button>
                     <button id="btn-magic" class="touch-btn action-btn" title="Magic / Dynamite">💣<span class="btn-label">BOMB</span></button>
@@ -320,6 +380,12 @@
                     <button id="btn-sword" class="touch-btn action-btn" title="Sword / Melee">⚔️<span class="btn-label">ATTACK</span></button>
                     <button id="btn-jump" class="touch-btn action-btn" title="Jump">🦘<span class="btn-label">JUMP</span></button>
                 </div>
+
+                <div class="layout-size-controls">
+                    <span>Buttons</span>
+                    <button class="layout-size-btn" onclick="adjustElementScale('action-cluster', -0.1)">-</button>
+                    <button class="layout-size-btn" onclick="adjustElementScale('action-cluster', 0.1)">+</button>
+                </div>
             </div>
         </div>
     </div>
@@ -327,6 +393,7 @@
     <div class="controls-bar">
         <button onclick="Module.canvas.requestFullscreen()">Fullscreen</button>
         <button id="toggle-touch-btn" onclick="toggleTouchControls()">Touch Controls: AUTO</button>
+        <button id="edit-layout-btn" onclick="toggleEditLayoutMode()">Edit Layout ⚙️</button>
         
         <label for="res">Resolution:</label>
         <select id="res" onchange="CheatCodeManager.winsize = this.value; CheatCodeManager.resize()">
@@ -350,33 +417,23 @@
     <textarea id="console" readonly></textarea>
 
     <script type="text/javascript">
-        // Virtual Key Input Simulation for Mobile Touch Controls
-        var touchState = {};
+        // ---------------------------------------------------------------------
+        // 1. Keyboard Simulation Helper
+        // ---------------------------------------------------------------------
+        var activeJoystickKeys = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
 
         function simulateKey(code, key, isDown) {
             var eventType = isDown ? 'keydown' : 'keyup';
             var keyCodeMap = {
-                'ArrowLeft': 37,
-                'ArrowUp': 38,
-                'ArrowRight': 39,
-                'ArrowDown': 40,
-                'Space': 32,
-                'ControlLeft': 17,
-                'AltLeft': 18,
-                'KeyZ': 90,
-                'Escape': 27,
-                'Enter': 13
+                'ArrowLeft': 37, 'ArrowUp': 38, 'ArrowRight': 39, 'ArrowDown': 40,
+                'Space': 32, 'ControlLeft': 17, 'AltLeft': 18, 'KeyZ': 90,
+                'Escape': 27, 'Enter': 13
             };
             var keyCode = keyCodeMap[code] || 0;
 
             var event = new KeyboardEvent(eventType, {
-                key: key,
-                code: code,
-                keyCode: keyCode,
-                which: keyCode,
-                bubbles: true,
-                cancelable: true,
-                view: window
+                key: key, code: code, keyCode: keyCode, which: keyCode,
+                bubbles: true, cancelable: true, view: window
             });
 
             var target = document.getElementById('canvas') || window;
@@ -384,22 +441,154 @@
             window.dispatchEvent(event);
         }
 
-        function bindTouchBtn(id, code, key) {
+        // ---------------------------------------------------------------------
+        // 2. 8-Direction Virtual Joystick Implementation
+        // ---------------------------------------------------------------------
+        var joystickContainer = document.getElementById('joystick-container');
+        var joystickKnob = document.getElementById('joystick-knob');
+        var isJoystickActive = false;
+        var joystickTouchId = null;
+
+        function updateJoystickDirection(angleDeg, distance) {
+            var newKeys = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
+
+            // Deadzone check
+            if (distance >= 12) {
+                // Classify angle into 8 octants
+                if (angleDeg >= -22.5 && angleDeg < 22.5) {
+                    newKeys.ArrowRight = true; // East
+                } else if (angleDeg >= 22.5 && angleDeg < 67.5) {
+                    newKeys.ArrowDown = true; newKeys.ArrowRight = true; // South-East
+                } else if (angleDeg >= 67.5 && angleDeg < 112.5) {
+                    newKeys.ArrowDown = true; // South
+                } else if (angleDeg >= 112.5 && angleDeg < 157.5) {
+                    newKeys.ArrowDown = true; newKeys.ArrowLeft = true; // South-West
+                } else if (angleDeg >= 157.5 || angleDeg < -157.5) {
+                    newKeys.ArrowLeft = true; // West
+                } else if (angleDeg >= -157.5 && angleDeg < -112.5) {
+                    newKeys.ArrowUp = true; newKeys.ArrowLeft = true; // North-West
+                } else if (angleDeg >= -112.5 && angleDeg < -67.5) {
+                    newKeys.ArrowUp = true; // North
+                } else if (angleDeg >= -67.5 && angleDeg < -22.5) {
+                    newKeys.ArrowUp = true; newKeys.ArrowRight = true; // North-East
+                }
+            }
+
+            // Sync state differences
+            for (var keyName in newKeys) {
+                if (newKeys[keyName] !== activeJoystickKeys[keyName]) {
+                    activeJoystickKeys[keyName] = newKeys[keyName];
+                    simulateKey(keyName, keyName, newKeys[keyName]);
+                }
+            }
+        }
+
+        function resetJoystick() {
+            isJoystickActive = false;
+            joystickTouchId = null;
+            joystickKnob.style.transform = `translate(0px, 0px)`;
+            for (var keyName in activeJoystickKeys) {
+                if (activeJoystickKeys[keyName]) {
+                    activeJoystickKeys[keyName] = false;
+                    simulateKey(keyName, keyName, false);
+                }
+            }
+        }
+
+        function handleJoystickMove(clientX, clientY) {
+            if (isEditLayoutMode) return;
+            var rect = joystickContainer.getBoundingClientRect();
+            var centerX = rect.left + rect.width / 2;
+            var centerY = rect.top + rect.height / 2;
+
+            var deltaX = clientX - centerX;
+            var deltaY = clientY - centerY;
+            var distance = Math.hypot(deltaX, deltaY);
+            var maxRadius = rect.width / 2 - 25;
+
+            var clampedDistance = Math.min(distance, maxRadius);
+            var angleRad = Math.atan2(deltaY, deltaX);
+            var angleDeg = angleRad * (180 / Math.PI);
+
+            var knobX = clampedDistance * Math.cos(angleRad);
+            var knobY = clampedDistance * Math.sin(angleRad);
+
+            joystickKnob.style.transform = `translate(${knobX}px, ${knobY}px)`;
+            updateJoystickDirection(angleDeg, distance);
+        }
+
+        joystickContainer.addEventListener('touchstart', function (e) {
+            if (isEditLayoutMode) return;
+            e.preventDefault();
+            var touch = e.changedTouches[0];
+            joystickTouchId = touch.identifier;
+            isJoystickActive = true;
+            handleJoystickMove(touch.clientX, touch.clientY);
+        }, { passive: false });
+
+        window.addEventListener('touchmove', function (e) {
+            if (!isJoystickActive) return;
+            for (var i = 0; i < e.changedTouches.length; i++) {
+                if (e.changedTouches[i].identifier === joystickTouchId) {
+                    e.preventDefault();
+                    handleJoystickMove(e.changedTouches[i].clientX, e.changedTouches[i].clientY);
+                    break;
+                }
+            }
+        }, { passive: false });
+
+        window.addEventListener('touchend', function (e) {
+            if (!isJoystickActive) return;
+            for (var i = 0; i < e.changedTouches.length; i++) {
+                if (e.changedTouches[i].identifier === joystickTouchId) {
+                    resetJoystick();
+                    break;
+                }
+            }
+        });
+
+        window.addEventListener('touchcancel', resetJoystick);
+
+        // Mouse Support for Joystick (Desktop Testing)
+        joystickContainer.addEventListener('mousedown', function (e) {
+            if (isEditLayoutMode) return;
+            isJoystickActive = true;
+            handleJoystickMove(e.clientX, e.clientY);
+        });
+
+        window.addEventListener('mousemove', function (e) {
+            if (isJoystickActive && joystickTouchId === null) {
+                handleJoystickMove(e.clientX, e.clientY);
+            }
+        });
+
+        window.addEventListener('mouseup', function () {
+            if (isJoystickActive && joystickTouchId === null) resetJoystick();
+        });
+
+        // ---------------------------------------------------------------------
+        // 3. Action Buttons Event Binding
+        // ---------------------------------------------------------------------
+        var touchButtonStates = {};
+
+        function bindActionButton(id, code, key) {
             var btn = document.getElementById(id);
             if (!btn) return;
 
             function press(e) {
+                if (isEditLayoutMode) return;
                 if (e) e.preventDefault();
                 btn.classList.add('active');
-                touchState[id] = true;
+                touchButtonStates[id] = true;
                 simulateKey(code, key, true);
             }
 
             function release(e) {
+                if (isEditLayoutMode) return;
                 if (e) e.preventDefault();
                 btn.classList.remove('active');
-                if (touchState[id]) {
-                    touchState[id] = false;
+                if (touchButtonStates[id]) {
+                    touchButtonStates[id] = false;
                     simulateKey(code, key, false);
                 }
             }
@@ -407,34 +596,183 @@
             btn.addEventListener('touchstart', press, { passive: false });
             btn.addEventListener('touchend', release, { passive: false });
             btn.addEventListener('touchcancel', release, { passive: false });
-
             btn.addEventListener('mousedown', press);
             btn.addEventListener('mouseup', release);
             btn.addEventListener('mouseleave', release);
         }
 
-        function setupTouchControls() {
-            bindTouchBtn('btn-up', 'ArrowUp', 'ArrowUp');
-            bindTouchBtn('btn-left', 'ArrowLeft', 'ArrowLeft');
-            bindTouchBtn('btn-right', 'ArrowRight', 'ArrowRight');
-            bindTouchBtn('btn-down', 'ArrowDown', 'ArrowDown');
+        function setupActionButtons() {
+            bindActionButton('btn-jump', 'Space', ' ');
+            bindActionButton('btn-sword', 'ControlLeft', 'Control');
+            bindActionButton('btn-shoot', 'AltLeft', 'Alt');
+            bindActionButton('btn-magic', 'KeyZ', 'z');
+            bindActionButton('btn-esc', 'Escape', 'Escape');
+            bindActionButton('btn-enter', 'Enter', 'Enter');
+        }
 
-            bindTouchBtn('btn-jump', 'Space', ' ');
-            bindTouchBtn('btn-sword', 'ControlLeft', 'Control');
-            bindTouchBtn('btn-shoot', 'AltLeft', 'Alt');
-            bindTouchBtn('btn-magic', 'KeyZ', 'z');
+        // ---------------------------------------------------------------------
+        // 4. Custom Drag & Resize Layout System
+        // ---------------------------------------------------------------------
+        var isEditLayoutMode = false;
+        var elementLayoutConfig = {
+            'top-bar': { left: '10px', top: '10px', right: '10px', bottom: 'auto', scale: 1.0 },
+            'joystick': { left: '20px', bottom: '20px', right: 'auto', top: 'auto', scale: 1.0 },
+            'action-cluster': { right: '20px', bottom: '20px', left: 'auto', top: 'auto', scale: 1.0 }
+        };
 
-            bindTouchBtn('btn-esc', 'Escape', 'Escape');
-            bindTouchBtn('btn-enter', 'Enter', 'Enter');
+        function loadLayoutConfig() {
+            try {
+                var saved = localStorage.getItem('openclaw_touch_layout');
+                if (saved) {
+                    var parsed = JSON.parse(saved);
+                    Object.assign(elementLayoutConfig, parsed);
+                }
+            } catch (err) { console.warn("Could not load layout config:", err); }
+            applyLayoutConfig();
+        }
 
-            // Auto-detect mobile / touch screen
-            var isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0);
-            if (isTouch) {
-                document.getElementById('touch-controls').style.display = 'block';
+        function saveLayoutConfig() {
+            try {
+                localStorage.setItem('openclaw_touch_layout', JSON.stringify(elementLayoutConfig));
+            } catch (err) { console.warn("Could not save layout config:", err); }
+        }
+
+        function applyLayoutConfig() {
+            for (var elemId in elementLayoutConfig) {
+                var cfg = elementLayoutConfig[elemId];
+                var el = document.querySelector(`[data-element-id="${elemId}"]`);
+                if (el) {
+                    if (cfg.left !== undefined) el.style.left = cfg.left;
+                    if (cfg.top !== undefined) el.style.top = cfg.top;
+                    if (cfg.right !== undefined) el.style.right = cfg.right;
+                    if (cfg.bottom !== undefined) el.style.bottom = cfg.bottom;
+                    var scale = cfg.scale || 1.0;
+                    var transformBase = elemId === 'joystick' ? 'bottom left' : (elemId === 'action-cluster' ? 'bottom right' : 'top left');
+                    el.style.transformOrigin = transformBase;
+                    el.style.transform = `scale(${scale})`;
+                }
             }
         }
 
+        function adjustElementScale(elemId, delta) {
+            if (!elementLayoutConfig[elemId]) return;
+            var curScale = elementLayoutConfig[elemId].scale || 1.0;
+            var newScale = Math.min(1.6, Math.max(0.6, Math.round((curScale + delta) * 10) / 10));
+            elementLayoutConfig[elemId].scale = newScale;
+            applyLayoutConfig();
+            saveLayoutConfig();
+        }
+
+        function toggleEditLayoutMode() {
+            isEditLayoutMode = !isEditLayoutMode;
+            var overlay = document.getElementById('touch-controls');
+            var btn = document.getElementById('edit-layout-btn');
+
+            if (isEditLayoutMode) {
+                overlay.style.display = 'block';
+                btn.innerText = 'Lock Layout 🔒';
+                btn.style.backgroundColor = '#00ffaa';
+                btn.style.color = '#0b0c10';
+
+                document.querySelectorAll('.movable-element').forEach(el => {
+                    el.classList.add('edit-mode-active');
+                    var ctrl = el.querySelector('.layout-size-controls');
+                    if (ctrl) ctrl.style.display = 'flex';
+                });
+            } else {
+                btn.innerText = 'Edit Layout ⚙️';
+                btn.style.backgroundColor = '#1f2833';
+                btn.style.color = '#66fcf1';
+
+                document.querySelectorAll('.movable-element').forEach(el => {
+                    el.classList.remove('edit-mode-active');
+                    var ctrl = el.querySelector('.layout-size-controls');
+                    if (ctrl) ctrl.style.display = 'none';
+                });
+
+                var isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+                if (touchControlsForcedState === 'auto') {
+                    overlay.style.display = isTouch ? 'block' : 'none';
+                }
+                saveLayoutConfig();
+            }
+        }
+
+        function setupMovableElements() {
+            var activeDragEl = null;
+            var dragStartX = 0, dragStartY = 0;
+            var initialLeft = 0, initialTop = 0;
+
+            document.querySelectorAll('.movable-element').forEach(el => {
+                var elemId = el.getAttribute('data-element-id');
+
+                function onDragStart(e) {
+                    if (!isEditLayoutMode) return;
+                    if (e.target.closest('.layout-size-controls')) return;
+                    e.preventDefault();
+                    activeDragEl = el;
+
+                    var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                    var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+                    dragStartX = clientX;
+                    dragStartY = clientY;
+
+                    var rect = el.getBoundingClientRect();
+                    var containerRect = document.getElementById('game-container').getBoundingClientRect();
+                    initialLeft = rect.left - containerRect.left;
+                    initialTop = rect.top - containerRect.top;
+                }
+
+                el.addEventListener('touchstart', onDragStart, { passive: false });
+                el.addEventListener('mousedown', onDragStart);
+            });
+
+            function onDragMove(e) {
+                if (!activeDragEl || !isEditLayoutMode) return;
+                e.preventDefault();
+                var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+                var deltaX = clientX - dragStartX;
+                var deltaY = clientY - dragStartY;
+
+                var containerRect = document.getElementById('game-container').getBoundingClientRect();
+                var newLeft = Math.max(0, Math.min(containerRect.width - 50, initialLeft + deltaX));
+                var newTop = Math.max(0, Math.min(containerRect.height - 50, initialTop + deltaY));
+
+                activeDragEl.style.left = newLeft + 'px';
+                activeDragEl.style.top = newTop + 'px';
+                activeDragEl.style.right = 'auto';
+                activeDragEl.style.bottom = 'auto';
+
+                var elemId = activeDragEl.getAttribute('data-element-id');
+                if (elementLayoutConfig[elemId]) {
+                    elementLayoutConfig[elemId].left = newLeft + 'px';
+                    elementLayoutConfig[elemId].top = newTop + 'px';
+                    elementLayoutConfig[elemId].right = 'auto';
+                    elementLayoutConfig[elemId].bottom = 'auto';
+                }
+            }
+
+            function onDragEnd() {
+                if (activeDragEl && isEditLayoutMode) {
+                    saveLayoutConfig();
+                    activeDragEl = null;
+                }
+            }
+
+            window.addEventListener('touchmove', onDragMove, { passive: false });
+            window.addEventListener('mousemove', onDragMove);
+            window.addEventListener('touchend', onDragEnd);
+            window.addEventListener('mouseup', onDragEnd);
+        }
+
+        // ---------------------------------------------------------------------
+        // 5. Mobile Auto-Resolution & Fullscreen Auto-Hide Controls
+        // ---------------------------------------------------------------------
         var touchControlsForcedState = 'auto';
+
         function toggleTouchControls() {
             var overlay = document.getElementById('touch-controls');
             var btn = document.getElementById('toggle-touch-btn');
@@ -454,7 +792,46 @@
             }
         }
 
-        window.addEventListener('DOMContentLoaded', setupTouchControls);
+        function setupMobileResolutionAndFullscreen() {
+            var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || ('ontouchstart' in window);
+            
+            // Default 1024x768 on mobile if no saved resolution
+            if (isMobile && !window.localStorage.getItem('width')) {
+                window.localStorage.setItem('width', '1024');
+                window.localStorage.setItem('height', '768');
+                window.localStorage.setItem('scale', '-1');
+                document.getElementById('res').value = '1024 768';
+            }
+
+            // Fullscreen behavior: Auto-hide buttons in fullscreen as requested
+            document.addEventListener('fullscreenchange', function () {
+                var overlay = document.getElementById('touch-controls');
+                if (document.fullscreenElement) {
+                    if (touchControlsForcedState !== 'on') {
+                        overlay.style.display = 'none';
+                    }
+                } else {
+                    if (touchControlsForcedState === 'auto') {
+                        var isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+                        overlay.style.display = isTouchDevice ? 'block' : 'none';
+                    } else if (touchControlsForcedState === 'on') {
+                        overlay.style.display = 'block';
+                    }
+                }
+            });
+
+            // Initial Touch Display Check
+            if (isMobile && touchControlsForcedState === 'auto') {
+                document.getElementById('touch-controls').style.display = 'block';
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', function () {
+            setupActionButtons();
+            setupMovableElements();
+            loadLayoutConfig();
+            setupMobileResolutionAndFullscreen();
+        });
     </script>
 
     <script type="text/javascript">
